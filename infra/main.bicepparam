@@ -1,10 +1,10 @@
 using './main.bicep'
 
 param subscriptionId = '2d68328e-bde2-4aeb-a5b4-1a11b4328961'
-param resourceGroupName = 'rg-ai-evals2-${location}'
+param resourceGroupName = 'rg-ai-evals-${location}'
 param location = 'eastus2'
 param publicNetworkAccess = 'Enabled'
-param disableLocalAuth = true
+param disableLocalAuth = false
 param azureOpenAIServiceName = 'azureOpenAI-${location}-${resourceGroupName}'
 param foundryHubName = 'hub${location}001'
 param foundryProjectName = 'project${location}001'

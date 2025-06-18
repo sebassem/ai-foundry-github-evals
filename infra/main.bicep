@@ -9,7 +9,7 @@ param location string = deployment().location
 param publicNetworkAccess string = 'Enabled'
 
 @description('Disable local authentication for the Azure OpenAI Service')
-param disableLocalAuth bool = true
+param disableLocalAuth bool = false
 
 @description('Name for the Azure OpenAI Service')
 param azureOpenAIServiceName string = 'azureOpenAI-${location}-${uniqueString(resourceGroupName)}'
