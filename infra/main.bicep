@@ -1,5 +1,9 @@
+targetScope = 'subscription'
+
+param resourceGroupName string = 'rg-${location}-${uniqueString(deployment().name)}'
+
 @description('Location for all resources')
-param location string = resourceGroup().location
+param location string = deployment().location
 
 @description('Public network access for the Azure OpenAI Service and Azure AI Foundry')
 param publicNetworkAccess string = 'Enabled'
@@ -8,13 +12,19 @@ param publicNetworkAccess string = 'Enabled'
 param disableLocalAuth bool = true
 
 @description('Name for the Azure OpenAI Service')
-param azureOpenAIServiceName string = 'azureOpenAI-${location}-${uniqueString(resourceGroup().id)}'
+param azureOpenAIServiceName string = 'azureOpenAI-${location}-${uniqueString(resourceGroupName)}'
 
 @description('Name for the Azure AI Foundry Hub')
-param foundryHubName string = 'hub${location}${uniqueString(resourceGroup().id)}'
+param foundryHubName string = 'hub${location}${uniqueString(resourceGroupName)}'
 
 @description('Name for the Azure AI Foundry Project')
-param foundryProjectName string = 'project${location}${uniqueString(resourceGroup().id)}'
+param foundryProjectName string = 'project${location}${uniqueString(resourceGroupName)}'
+
+param githubOrganization string
+
+param githubRepository string
+
+param githubBranch string
 
 @description('Optional. The Azure OpenAI Service models to deploy')
 param models array = [
@@ -46,8 +56,18 @@ param models array = [
 
 var deployerPrincipal = deployer().objectId
 
+module resourceGroup 'br/public:avm/res/resources/resource-group:0.4.1' = {
+  params: {
+    name: 'rg-${location}-${uniqueString(resourceGroupName)}'
+    location: location
+  }
+}
 
 module azureOpenAIService 'br/public:avm/res/cognitive-services/account:0.11.0' = {
+  scope: az.resourceGroup(resourceGroupName)
+  dependsOn: [
+    resourceGroup
+  ]
   params: {
     name: azureOpenAIServiceName
     kind: 'OpenAI'
@@ -72,6 +92,10 @@ module azureOpenAIService 'br/public:avm/res/cognitive-services/account:0.11.0' 
 }
 
 module azureAIFoundary 'br/public:avm/res/machine-learning-services/workspace:0.12.1' = {
+  scope: az.resourceGroup(resourceGroupName)
+  dependsOn: [
+    resourceGroup
+  ]
   params: {
     name: foundryHubName
     sku: 'Standard'
@@ -101,6 +125,10 @@ module azureAIFoundary 'br/public:avm/res/machine-learning-services/workspace:0.
 }
 
 module azureAIFoundaryProject 'br/public:avm/res/machine-learning-services/workspace:0.12.1' = {
+  scope: az.resourceGroup(resourceGroupName)
+  dependsOn: [
+    resourceGroup
+  ]
   params: {
     name: foundryProjectName
     sku: 'Standard'
@@ -125,11 +153,47 @@ module azureAIFoundaryProject 'br/public:avm/res/machine-learning-services/works
 }
 
 module azureAiFoundaryAIRoleAssignment 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.1' = {
+  scope: az.resourceGroup(resourceGroupName)
+  dependsOn: [
+    resourceGroup
+  ]
   params: {
     principalId: azureAIFoundary.outputs.?systemAssignedMIPrincipalId ?? ''
     resourceId: azureOpenAIService.outputs.resourceId
     roleDefinitionId: 'acdd72a7-3385-48ef-bd42-f606fba81ae7'
     principalType: 'ServicePrincipal'
     description: 'Reader'
+  }
+}
+
+module userAssignedIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.1' = {
+  scope: az.resourceGroup(resourceGroupName)
+  dependsOn: [
+    resourceGroup
+  ]
+  params: {
+    name: 'msi-${location}-${uniqueString(resourceGroupName)}'
+    location: location
+    federatedIdentityCredentials: [
+      {
+        name: 'azure-openai-federated-identity'
+        audiences: [
+          'api://AzureADTokenExchange'
+        ]
+        issuer: 'https://token.actions.githubusercontent.com'
+        subject: 'repo:${githubOrganization}/${githubRepository}:ref:refs/heads/${githubBranch}'
+      }
+    ]
+  }
+}
+
+module msiRoleAssignment 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.2' = {
+  scope: az.resourceGroup(resourceGroupName)
+  params: {
+    principalId: userAssignedIdentity.outputs.principalId
+    resourceId: resourceGroup.outputs.resourceId
+    roleDefinitionId: 'b24988ac-6180-42a0-ab88-20f7382dd24c'
+    principalType: 'ServicePrincipal'
+    description: 'Contributor role for the user assigned identity'
   }
 }

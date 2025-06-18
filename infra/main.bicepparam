@@ -1,11 +1,15 @@
 using './main.bicep'
 
+param resourceGroupName = 'rg-ai-evals'
 param location = 'eastus2'
 param publicNetworkAccess = 'Enabled'
 param disableLocalAuth = true
 param azureOpenAIServiceName = 'azureOpenAI-${location}-001'
 param foundryHubName = 'hub${location}001'
 param foundryProjectName = 'project${location}001'
+param githubOrganization = 'sebassem'
+param githubRepository = 'ai-foundry-github-evals'
+param githubBranch = 'main'
 param models = [
   {
     name: 'gpt-4o-mini'
