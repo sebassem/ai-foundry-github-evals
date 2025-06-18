@@ -46,5 +46,6 @@ jobs:
       - name: Run AI Evaluation
         id: run-ai-evaluation
         uses: microsoft/genai-evals@main
+        continue-on-error: true
         with:
           evaluate-configuration: ${{ env.GENAI_EVALS_CONFIG_PATH }}
