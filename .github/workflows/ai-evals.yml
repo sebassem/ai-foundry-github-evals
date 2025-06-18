@@ -33,6 +33,7 @@ jobs:
               "type": "azure_openai",
               "azure_endpoint": "${{ secrets.AZURE_OPENAI_ENDPOINT }}",
               "azure_deployment": "${{ secrets.AZURE_OPENAI_CHAT_DEPLOYMENT }}",
+              "api_key": "${{ secrets.AZURE_OPENAI_API_KEY }}",
               "api_version": "${{ secrets.AZURE_OPENAI_API_VERSION }}"
             }
           }
