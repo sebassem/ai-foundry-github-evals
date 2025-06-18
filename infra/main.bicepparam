@@ -1,10 +1,11 @@
 using './main.bicep'
 
-param resourceGroupName = 'rg-ai-evals'
+param subscriptionId = '2d68328e-bde2-4aeb-a5b4-1a11b4328961'
+param resourceGroupName = 'rg-ai-evals2-${location}'
 param location = 'eastus2'
 param publicNetworkAccess = 'Enabled'
 param disableLocalAuth = true
-param azureOpenAIServiceName = 'azureOpenAI-${location}-001'
+param azureOpenAIServiceName = 'azureOpenAI-${location}-${resourceGroupName}'
 param foundryHubName = 'hub${location}001'
 param foundryProjectName = 'project${location}001'
 param githubOrganization = 'sebassem'
@@ -19,7 +20,7 @@ param models = [
       version: '2024-07-18'
     }
     sku: {
-      capacity: 10
+      capacity: 30
       name: 'GlobalStandard'
     }
   }
@@ -28,10 +29,10 @@ param models = [
     model: {
       format: 'OpenAI'
       name: 'gpt-4.1-mini'
-      version: '2025-01-01-preview'
+      version: '2025-04-14'
     }
     sku: {
-      capacity: 10
+      capacity: 30
       name: 'GlobalStandard'
     }
   }

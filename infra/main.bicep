@@ -1,4 +1,4 @@
-targetScope = 'subscription'
+targetScope = 'managementGroup'
 
 param resourceGroupName string = 'rg-${location}-${uniqueString(deployment().name)}'
 
@@ -20,51 +20,33 @@ param foundryHubName string = 'hub${location}${uniqueString(resourceGroupName)}'
 @description('Name for the Azure AI Foundry Project')
 param foundryProjectName string = 'project${location}${uniqueString(resourceGroupName)}'
 
+@description('GitHub organization name for federated identity')
 param githubOrganization string
 
+@description('GitHub repository name for federated identity')
 param githubRepository string
 
+@description('GitHub branch name for federated identity')
 param githubBranch string
 
-@description('Optional. The Azure OpenAI Service models to deploy')
-param models array = [
-  {
-    name: 'gpt-4o-mini'
-    model: {
-      format: 'OpenAI'
-      name: 'gpt-4o-mini'
-      version: '2024-07-18'
-    }
-    sku: {
-      capacity: 10
-      name: 'GlobalStandard'
-    }
-  }
-  {
-    name: 'gpt-4.1-mini'
-    model: {
-      format: 'OpenAI'
-      name: 'gpt-4.1-mini'
-      version: '2025-01-01-preview'
-    }
-    sku: {
-      capacity: 10
-      name: 'GlobalStandard'
-    }
-  }
-]
+@description('Required. The Azure OpenAI Service models to deploy')
+param models array
+
+@description('Subscription ID where the resources will be deployed')
+param subscriptionId string
 
 var deployerPrincipal = deployer().objectId
 
 module resourceGroup 'br/public:avm/res/resources/resource-group:0.4.1' = {
+  scope: subscription(subscriptionId)
   params: {
-    name: 'rg-${location}-${uniqueString(resourceGroupName)}'
+    name: resourceGroupName
     location: location
   }
 }
 
 module azureOpenAIService 'br/public:avm/res/cognitive-services/account:0.11.0' = {
-  scope: az.resourceGroup(resourceGroupName)
+  scope: az.resourceGroup(subscriptionId,resourceGroupName)
   dependsOn: [
     resourceGroup
   ]
@@ -92,7 +74,7 @@ module azureOpenAIService 'br/public:avm/res/cognitive-services/account:0.11.0' 
 }
 
 module azureAIFoundary 'br/public:avm/res/machine-learning-services/workspace:0.12.1' = {
-  scope: az.resourceGroup(resourceGroupName)
+  scope: az.resourceGroup(subscriptionId,resourceGroupName)
   dependsOn: [
     resourceGroup
   ]
@@ -125,7 +107,7 @@ module azureAIFoundary 'br/public:avm/res/machine-learning-services/workspace:0.
 }
 
 module azureAIFoundaryProject 'br/public:avm/res/machine-learning-services/workspace:0.12.1' = {
-  scope: az.resourceGroup(resourceGroupName)
+  scope: az.resourceGroup(subscriptionId,resourceGroupName)
   dependsOn: [
     resourceGroup
   ]
@@ -153,7 +135,7 @@ module azureAIFoundaryProject 'br/public:avm/res/machine-learning-services/works
 }
 
 module azureAiFoundaryAIRoleAssignment 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.1' = {
-  scope: az.resourceGroup(resourceGroupName)
+  scope: az.resourceGroup(subscriptionId,resourceGroupName)
   dependsOn: [
     resourceGroup
   ]
@@ -167,7 +149,7 @@ module azureAiFoundaryAIRoleAssignment 'br/public:avm/ptn/authorization/resource
 }
 
 module userAssignedIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.1' = {
-  scope: az.resourceGroup(resourceGroupName)
+  scope: az.resourceGroup(subscriptionId,resourceGroupName)
   dependsOn: [
     resourceGroup
   ]
@@ -187,13 +169,14 @@ module userAssignedIdentity 'br/public:avm/res/managed-identity/user-assigned-id
   }
 }
 
-module msiRoleAssignment 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.2' = {
-  scope: az.resourceGroup(resourceGroupName)
+module msiRoleAssignment 'br/public:avm/ptn/authorization/role-assignment:0.2.0' = {
   params: {
     principalId: userAssignedIdentity.outputs.principalId
-    resourceId: resourceGroup.outputs.resourceId
-    roleDefinitionId: 'b24988ac-6180-42a0-ab88-20f7382dd24c'
-    principalType: 'ServicePrincipal'
+    roleDefinitionIdOrName: 'Contributor'
     description: 'Contributor role for the user assigned identity'
+    principalType: 'ServicePrincipal'
+    location: location
+    subscriptionId: subscriptionId
+    resourceGroupName: resourceGroup.outputs.name
   }
 }
