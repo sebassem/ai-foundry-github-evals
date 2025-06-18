@@ -49,3 +49,6 @@ jobs:
         continue-on-error: true
         with:
           evaluate-configuration: ${{ env.GENAI_EVALS_CONFIG_PATH }}
+      - uses: austenstone/job-summary@v2.0
+        id: summary
+      - run: echo "${{ steps.summary.outputs.job-summary }}"
