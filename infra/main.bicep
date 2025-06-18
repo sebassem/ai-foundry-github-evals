@@ -180,3 +180,17 @@ module msiRoleAssignment 'br/public:avm/ptn/authorization/role-assignment:0.2.0'
     resourceGroupName: resourceGroup.outputs.name
   }
 }
+
+module msiAzureOpenAIServiceRoleAssignment 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.2' = {
+  scope: az.resourceGroup(subscriptionId,resourceGroupName)
+  dependsOn: [
+    resourceGroup
+  ]
+  params: {
+    principalId: userAssignedIdentity.outputs.principalId
+    resourceId: azureOpenAIService.outputs.resourceId
+    roleDefinitionId: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
+    principalType: 'ServicePrincipal'
+    description: 'Cognitive Services OpenAI User'
+  }
+}
